@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { type CoreMessage, streamText, tool } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
+import { bedrock } from '@ai-sdk/amazon-bedrock';
 
 import {
   // createOrConnect,
@@ -25,7 +26,10 @@ export async function POST(req: Request) {
   console.log('All sandboxes', allSandboxes)
 
   const result = await streamText({
-    model: anthropic('claude-3-5-sonnet-20240620'),
+    // model: anthropic('claude-3-5-sonnet-20240620'),
+     model: bedrock('anthropic.claude-3-5-sonnet-20240620-v1:0', {
+      additionalModelRequestFields: { top_k: 250 },
+    }),
     tools: {
       // writeFile: tool({
       //   description: 'Writes to a file. If the file does not exists, it gets created. If it does, it gets overwritten.',
