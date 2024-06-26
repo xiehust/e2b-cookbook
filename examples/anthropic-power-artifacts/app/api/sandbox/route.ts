@@ -7,8 +7,6 @@ import {
 export async function POST(req: Request) {
   const { userID, code, file, command }: { userID: string, code: string, file: string, command: string } = await req.json()
   const sbx = await createOrConnect(userID)
-
-
   const url = `https://${sbx.getHostname()}`
 
   await sbx.keepAlive(sandboxTimeout)
