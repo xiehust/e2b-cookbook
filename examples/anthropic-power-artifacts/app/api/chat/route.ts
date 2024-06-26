@@ -11,6 +11,7 @@ import { bedrock } from '@ai-sdk/amazon-bedrock';
 
 import {
   runPython,
+  runJs
 } from '@/lib/sandbox'
 
 export interface ServerMessage {
@@ -62,12 +63,49 @@ export async function POST(req: Request) {
           }
         },
       }),
+      runJs: tool({
+        description: 'Runs HTML or Javascript code.',
+        parameters: z.object({
+          title: z.string().describe('Short title (5 words max) of the artifact.'),
+          description: z.string().describe('Short description (10 words max) of the artifact.'),
+          code: z.string().describe('The code to run. can be a html and js code'),
+        }),
+        async execute({ code }) {
+          // console.log(code)
+          data.append({
+            tool: 'runJs',
+            state: 'running',
+          })
+
+          const execOutput = await runJs(userID, code)
+          const stdout = execOutput.logs.stdout
+          const stderr = execOutput.logs.stderr
+          const runtimeError = execOutput.error
+          const results = execOutput.results
+          // const stdout :string [] = []
+          // const stderr :string [] = []
+          // const runtimeError = undefined
+          // const results = [{'html':code}]
+
+          data.append({
+            tool: 'runJs',
+            state: 'complete',
+          })
+          console.log(data)
+          return {
+            stdout,
+            stderr,
+            runtimeError,
+            cellResults: results,
+          }
+        },
+      }),
     },
     toolChoice: 'auto',
     system: `
-    You are a skilled Python developer.
+    You are a skilled Python and Javascript developer.
     One of your expertise is also data science.
-    You can run Python, and bash code. Code for each programming language runs in its own context and reference previous definitions and variables.
+    You can run Python, Javascript and bash code. Code for each programming language runs in its own context and reference previous definitions and variables.
     The code runs inside a Jupyter notebook so we can easily get visualizations.
     Use seaborn for data visualization.
 
