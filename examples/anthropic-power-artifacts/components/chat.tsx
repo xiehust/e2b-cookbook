@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, FormEvent,useCallback } from 'react'
 import { Terminal } from 'lucide-react'
 import { Message } from 'ai/react'
-
+import type {
+  ChatRequestOptions,
+  UseChatOptions,
+} from '@ai-sdk/ui-utils';
 import { Input } from '@/components/ui/input'
 
 // simulate simple monte carlo method with 1000 iterations. At each iteration, create a point and check if that point was inside the unit circle. If the point was inside, make it green. At the end show me visualization that shows all the points that you created in every iteration
@@ -9,14 +12,47 @@ import { Input } from '@/components/ui/input'
 export function Chat({
   messages,
   input,
+  append,
   handleInputChange,
   handleSubmit,
+  setInput
 }: {
   messages: Message[],
   input: string,
+  append:  (e: any) => any,
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void,
+  setInput:(e:any) => void
 }) {
+
+
+  const latestMessageWithToolInvocation = [...messages].reverse().find(message => message.toolInvocations && message.toolInvocations.length > 0)
+  // Get the latest tool invocation
+  const latestToolInvocation = latestMessageWithToolInvocation?.toolInvocations?.[0]
+  const tools_text = latestToolInvocation? latestToolInvocation.args.code : undefined;
+
+  const customSubmit = useCallback(
+    (
+      event?: { preventDefault?: () => void },
+    ) => {
+
+      event?.preventDefault?.();
+
+      if (!input) return;
+
+      append(
+        {
+          content: tools_text? `Here is the code:\n${tools_text}, \n\n Here is the new user request:${input}`:input,
+          role: 'user',
+          createdAt: new Date(),
+        },
+      );
+      setInput('');
+    },
+    [input, append],
+  );
+
+
   return (
     <div className="flex-1 flex flex-col py-4 gap-4 max-h-full max-w-[800px] mx-auto justify-between">
       <div className="flex flex-col gap-2 overflow-y-auto max-h-full px-4 rounded-lg">
@@ -42,8 +78,9 @@ export function Chat({
         ))}
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <Input className="ring-0" placeholder="Ask Claude..." value={input} onChange={handleInputChange}/>
+      <form onSubmit={customSubmit}>
+        {/* <Input className="ring-0" placeholder="Ask Claude..." value={input} onChange={handleInputChange}/> */}
+        <Input className="ring-0" placeholder="Ask Claude..." value={input} onChange={(event) => setInput(event.target.value)}/>
       </form>
     </div>
   )

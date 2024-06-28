@@ -21,8 +21,8 @@ export interface ServerMessage {
 
 export async function POST(req: Request) {
   const { messages, userID }: { messages: CoreMessage[], userID: string } = await req.json()
-  console.log('userID', userID)
-
+  // console.log('userID', userID)
+  console.log(messages)
   let data: StreamData = new StreamData()
 
   const result = await streamText({
@@ -91,7 +91,7 @@ export async function POST(req: Request) {
             tool: 'runJs',
             state: 'complete',
           })
-          console.log(data)
+          // console.log(data)
           return {
             stdout,
             stderr,

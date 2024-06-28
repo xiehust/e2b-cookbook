@@ -30,18 +30,6 @@ function LogsOutput({ stdout, stderr }: {
   )
 }
 
-const IframeExample = ({iframeContent}:{iframeContent:string}) => {
-  return (
-    <div>
-      <div
-        dangerouslySetInnerHTML={{
-          __html: `<iframe srcdoc="${encodeURIComponent(iframeContent)}" width="100%" height="500px" frameBorder="1"  sandbox="allow-same-origin allow-scripts" ></iframe>`,
-        }}
-      />
-    </div>
-  );
-};
-
 
 
 export interface CodeExecResult {
@@ -96,7 +84,7 @@ export function ArtifactView({
         </>
       )
     }else if (cellResults[0].html){
-      console.log('ArtifactView.cellResults', cellResults);
+      // console.log('ArtifactView.cellResults', cellResults);
       return( 
         // <div className="w-full flex-1 p-4 flex items-start justify-center">
           <iframe
