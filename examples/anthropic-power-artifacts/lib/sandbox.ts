@@ -8,18 +8,21 @@ export async function createOrConnect(userID: string) {
   console.log('create or connect', userID)
   const allSandboxes = await CodeInterpreter.list()
   console.log('all sandboxes', allSandboxes)
-  const sandboxInfo = allSandboxes.find(sbx => sbx.alias === TEMPLATE)
+  // const sandboxInfo = allSandboxes.find(sbx => sbx.alias === TEMPLATE)
+  const sandboxInfo = allSandboxes.find(sbx => sbx.metadata?.userId === userID)
+
   console.log('sandbox info', sandboxInfo)
   if (!sandboxInfo) {
-    // return await CodeInterpreter.create({
-    //   metadata: {
-    //     userId: userID
-    //   }
-    // })
-    console.log('create sandbox....',TEMPLATE)
-    const sandbox = await CodeInterpreter.create({
-      template: TEMPLATE
+    console.log('create sandbox....')
+
+    const sandbox =  await CodeInterpreter.create({
+      metadata: {
+        userId: userID
+      }
     })
+    // const sandbox = await CodeInterpreter.create({
+    //   template: TEMPLATE
+    // })
     console.log('sandbox id', sandbox.id)
     return sandbox
   }
