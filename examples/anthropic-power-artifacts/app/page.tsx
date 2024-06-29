@@ -11,6 +11,7 @@ const userID = 'dummy-user-id'
 
 export default function Home() {
   const { messages, setMessages,input,setInput,append, handleInputChange, handleSubmit, data ,} = useChat({
+    // maxToolRoundtrips: 5,
     api: '/api/chat',
     body: { userID },
   })
@@ -20,27 +21,10 @@ export default function Home() {
   const latestMessageWithToolInvocation = [...messages].reverse().find(message => message.toolInvocations && message.toolInvocations.length > 0)
   // Get the latest tool invocation
   const latestToolInvocation = latestMessageWithToolInvocation?.toolInvocations?.[0]
-  // console.log('latestToolInvocation:',latestToolInvocation)
-  const last_message = messages.slice(-1)[0]
-  const tools_text = last_message?.toolInvocations? last_message.toolInvocations[0].args.title+'\n'+last_message.toolInvocations[0].args.description+'\n'+last_message.toolInvocations[0].args.code : null;
 
-  // console.log(messages);
-  // if the last messsage has tools result, then append to the assistant content
-  let new_messages = (tools_text && last_message?.role != 'user')? [...messages.slice(0,-1),{
-    ...last_message,
-    role:last_message?.role, 
-    content:last_message?.content+'\n'+tools_text,
-    toolInvocations:[]
-  }]:messages;
-  // if (tools_text && last_message?.role != 'user') {
-  //   setMessages([...messages.slice(0,-1),{
-  //     ...last_message,
-  //     role:last_message?.role, 
-  //     content:last_message?.content+'\n'+tools_text,
-  //     // toolInvocations:[]
-  //   }])
-  // }
-  // console.log('new_messages',new_messages);
+  const clearMessages = () => {
+    setMessages([]);
+  };
 
   return (
     <main className="flex min-h-screen max-h-screen">
@@ -55,6 +39,7 @@ export default function Home() {
           handleInputChange={handleInputChange}
           handleSubmit={handleSubmit}
           setInput={setInput}
+          clearMessages={clearMessages}
         />
         <SideView toolInvocation={latestToolInvocation} data={data} />
       </div>

@@ -1,33 +1,89 @@
 import { z } from 'zod'
 import {
   type CoreMessage,
+  type ImagePart,
+  type UserContent,
+  type CoreUserMessage,
+  type CoreAssistantMessage,
+  type CoreToolMessage,
   StreamingTextResponse,
   StreamData,
   streamText,
   tool,
+  convertToCoreMessages,
 } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
+// import { anthropic } from '@ai-sdk/anthropic'
 import { bedrock } from '@ai-sdk/amazon-bedrock';
-
+import type {
+  RequestOptions,
+} from '@ai-sdk/ui-utils';
 import {
   runPython,
   runJs
-} from '@/lib/sandbox'
+} from '@/lib/local-sandbox'
+
+// import { ToolResult } from 'ai/generate-text/tool-result';
+
 
 export interface ServerMessage {
   role: 'user' | 'assistant' | 'function';
   content: string;
 }
 
+interface ToolResult<NAME extends string, ARGS, RESULT> {
+  /**
+ID of the tool call. This ID is used to match the tool call with the tool result.
+ */
+  toolCallId: string;
+  /**
+Name of the tool that was called.
+ */
+  toolName: NAME;
+  /**
+Arguments of the tool call. This is a JSON-serializable object that matches the tool's input schema.
+   */
+  args: ARGS;
+  /**
+Result of the tool call. This is the result of the tool's execution.
+   */
+  result: RESULT;
+}
+
+type initMessages ={
+  role: 'user' | 'assistant';
+  content: string;
+  toolInvocations?: Array<ToolResult<string, unknown, unknown>>;
+};
+
+
 export async function POST(req: Request) {
-  const { messages, userID }: { messages: CoreMessage[], userID: string } = await req.json()
+  const { messages, userID, data }: { messages: CoreMessage[], userID: string, data:string } = await req.json()
   // console.log('userID', userID)
   console.log(messages)
-  let data: StreamData = new StreamData()
+  // console.log(data)
+  const initialMessages = messages.slice(0, -1) as initMessages [];
+  // const coreMessages = convertToCoreMessages(initialMessages) 
+  const currentMessage = messages[messages.length - 1];
+  const imageData = data?JSON.parse(data):[];
+  const imageMessages = (imageData as []).map(it => ({ type: 'image', image: it})) as ImagePart[];
+  const userContent = [
+    { type: 'text', text: currentMessage.content as string },
+    ...imageMessages
+  ]
+  const newMessages =[
+    ...initialMessages,
+    {
+      role: 'user',
+      content: userContent as UserContent,
+    },
+  ];
+  console.log(newMessages)
+  let streamData: StreamData = new StreamData()
 
   const result = await streamText({
-    // model: anthropic('claude-3-5-sonnet-20240620'),
-     model: bedrock('anthropic.claude-3-5-sonnet-20240620-v1:0', {
+    // model: bedrock('anthropic.claude-3-sonnet-20240229-v1:0',
+     model: bedrock('anthropic.claude-3-5-sonnet-20240620-v1:0',
+       {
       additionalModelRequestFields: { top_k: 250 },
     }),
     tools: {
@@ -39,7 +95,7 @@ export async function POST(req: Request) {
           code: z.string().describe('The code to run.'),
         }),
         async execute({ code }) {
-          data.append({
+          streamData.append({
             tool: 'runPython',
             state: 'running',
           })
@@ -49,8 +105,7 @@ export async function POST(req: Request) {
           const stderr = execOutput.logs.stderr
           const runtimeError = execOutput.error
           const results = execOutput.results
-
-          data.append({
+          streamData.append({
             tool: 'runPython',
             state: 'complete',
           })
@@ -72,7 +127,7 @@ export async function POST(req: Request) {
         }),
         async execute({ code }) {
           // console.log(code)
-          data.append({
+          streamData.append({
             tool: 'runJs',
             state: 'running',
           })
@@ -87,7 +142,7 @@ export async function POST(req: Request) {
           // const runtimeError = undefined
           // const results = [{'html':code}]
 
-          data.append({
+          streamData.append({
             tool: 'runJs',
             state: 'complete',
           })
@@ -112,14 +167,14 @@ export async function POST(req: Request) {
     Messages inside [] means that it's a UI element or a user event. For example:
     - "[Chart was generated]" means a chart in a Jupyter notebook was generated and displayed to user.
     `,
-    messages,
+    messages:newMessages,
   })
 
   const stream = result.toAIStream({
     async onFinal() {
-      await data.close()
+      await streamData.close()
     }
   })
 
-  return new StreamingTextResponse(stream, {}, data);
+  return new StreamingTextResponse(stream, {}, streamData);
 }
